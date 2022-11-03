@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 18Mi
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-prj
+spec:
+  selector:
+    matchLabels:
+      app: mysql-prj
+  template:
+    metadata:
+      labels:
+        app: mysql-prj
+    spec:
+      containers:
+      - image: juniolemos/database:1.0
+        args:
+        - "--ignore-db-dir=lostfound"
+        imagePullPolicy: Always
+        name: mysql-prj
+        env:
+          # Use secret in real usage
+        - name: MYSQL_ROOT_PASSWORD
+          value: Senha123
+        - name: MYSQL_DATABASE
+          value: meubanco
+        ports:
+        - containerPort: 3306
+          name: mysql
+        
+        volumeMounts:
+        - name: local
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: local
+        persistentVolumeClaim:
+          claimName: local
+        
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php
+  labels:
+    app: php
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: php
+  template:
+    metadata:
+      labels:
+        app: php
+    spec:
+      containers:
+      - name: php
+        image: juniolemos/projeto-back:1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
